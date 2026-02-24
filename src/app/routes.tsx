@@ -1,0 +1,27 @@
+import { createBrowserRouter } from "react-router";
+import { Home } from "./pages/home";
+import { ArticleDetail } from "./pages/article-detail";
+import { AdminLogin } from "./pages/admin-login";
+import { AdminDashboard } from "./pages/admin-dashboard";
+import { Layout } from "./components/layout";
+import { NotFound } from "./pages/not-found";
+
+export const router = createBrowserRouter([
+  {
+    path: "/",
+    Component: Layout,
+    children: [
+      { index: true, Component: Home },
+      { path: "articles/:id", Component: ArticleDetail },
+      { path: "*", Component: NotFound },
+    ],
+  },
+  {
+    path: "/admin/login",
+    Component: AdminLogin,
+  },
+  {
+    path: "/admin/dashboard",
+    Component: AdminDashboard,
+  },
+]);
