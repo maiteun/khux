@@ -2,27 +2,6 @@ import { Outlet, Link, useLocation } from "react-router";
 import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 
-// KHUX Logo Component
-function KHUXLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect width="32" height="32" rx="6" fill="currentColor" fillOpacity="0.1" />
-      <path
-        d="M10 10L16 16M16 16L10 22M16 16L22 10M16 16L22 22"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export function Layout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -66,8 +45,7 @@ export function Layout() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2" onClick={handleLogoClick}>
-              <KHUXLogo className="h-8 w-8" />
+            <Link to="/" className="flex items-center" onClick={handleLogoClick}>
               <div className="text-2xl font-bold tracking-tight">KHUX</div>
             </Link>
 
@@ -82,6 +60,12 @@ export function Layout() {
                   {item.label}
                 </button>
               ))}
+              <Link
+                to="/admin/login"
+                className="text-sm font-medium tracking-wide transition-colors uppercase text-foreground/60 hover:text-foreground"
+              >
+                Admin
+              </Link>
             </nav>
 
             {/* Mobile menu button */}
@@ -110,6 +94,13 @@ export function Layout() {
                   {item.label}
                 </button>
               ))}
+              <Link
+                to="/admin/login"
+                className="block w-full text-left px-4 py-2 rounded-md transition-colors text-foreground/70 hover:text-foreground hover:bg-accent"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Admin
+              </Link>
             </nav>
           )}
         </div>
@@ -159,10 +150,19 @@ export function Layout() {
               <p className="text-sm text-muted-foreground">
                 Email: khux@khu.ac.kr
               </p>
+              <Link 
+                to="/admin/login" 
+                className="inline-block mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Admin
+              </Link>
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} KHUX. All rights reserved.
+            © {new Date().getFullYear()} KHUX. All rights reserved.{" "}
+            <Link to="/admin/login" className="opacity-30 hover:opacity-100 transition-opacity">
+              •
+            </Link>
           </div>
         </div>
       </footer>
