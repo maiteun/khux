@@ -96,21 +96,21 @@ export function Recruit() {
                 <Calendar className="h-5 w-5 text-primary" />
                 <h3 className="font-medium">지원 기간</h3>
               </div>
-              <p className="text-sm text-muted-foreground">2026.03.01 ~ 2026.03.15</p>
+              <p className="text-sm text-muted-foreground">2026.03.14 ~ 2026.05.05</p>
             </div>
             <div className="p-6 bg-card border border-border rounded-xl">
               <div className="flex items-center gap-3 mb-3">
                 <Clock className="h-5 w-5 text-primary" />
                 <h3 className="font-medium">면접 일정</h3>
               </div>
-              <p className="text-sm text-muted-foreground">2026.03.18 ~ 2026.03.20</p>
+              <p className="text-sm text-muted-foreground">2026.05.08 ~ 2026.05.12</p>
             </div>
             <div className="p-6 bg-card border border-border rounded-xl">
               <div className="flex items-center gap-3 mb-3">
                 <FileText className="h-5 w-5 text-primary" />
                 <h3 className="font-medium">결과 발표</h3>
               </div>
-              <p className="text-sm text-muted-foreground">2026.03.22</p>
+              <p className="text-sm text-muted-foreground">2026.05.15</p>
             </div>
           </div>
 
