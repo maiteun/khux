@@ -570,18 +570,36 @@ export function AdminDashboard() {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">카테고리 *</label>
-                    <select
-                      required
-                      value={formData.category || ""}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    >
-                      <option value="">카테고리 선택</option>
-                      <option value="Recruitment">Recruitment</option>
-                      <option value="Event">Event</option>
-                      <option value="Project">Project</option>
-                      <option value="Announcement">Announcement</option>
-                    </select>
+                    <div className="flex gap-2">
+                      <select
+                        value={["Recruitment", "Event", "Project", "Announcement"].includes(formData.category || "") ? formData.category : "__custom__"}
+                        onChange={(e) => {
+                          if (e.target.value === "__custom__") {
+                            setFormData({ ...formData, category: "" });
+                          } else {
+                            setFormData({ ...formData, category: e.target.value });
+                          }
+                        }}
+                        className="w-1/2 px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      >
+                        <option value="">카테고리 선택</option>
+                        <option value="Recruitment">Recruitment</option>
+                        <option value="Event">Event</option>
+                        <option value="Project">Project</option>
+                        <option value="Announcement">Announcement</option>
+                        <option value="__custom__">직접 입력</option>
+                      </select>
+                      {(!formData.category || !["Recruitment", "Event", "Project", "Announcement"].includes(formData.category)) && (
+                        <input
+                          type="text"
+                          required
+                          value={formData.category === "__custom__" ? "" : formData.category || ""}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          placeholder="카테고리 직접 입력"
+                          className="w-1/2 px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                        />
+                      )}
+                    </div>
                   </div>
 
                   <div>
