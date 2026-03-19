@@ -28,6 +28,7 @@ export function AdminDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -115,6 +116,126 @@ export function AdminDashboard() {
       console.error("Error deleting news:", error);
       alert("인증이 만료되었습니다. 다시 로그인해주세요.");
       navigate("/admin/login");
+    }
+  };
+
+  const handleEditArticle = (article: Article) => {
+    setEditingId(article.id);
+    setFormData({
+      title: article.title,
+      excerpt: article.excerpt,
+      content: article.content,
+      author: article.author,
+      team: article.team,
+      date: article.date,
+      tags: article.tags?.join(", ") || "",
+    });
+    setImagePreview(article.imageUrl || null);
+    setActiveTab("articles");
+    setShowAddModal(true);
+  };
+
+  const handleEditNews = (newsItem: NewsItem) => {
+    setEditingId(newsItem.id);
+    setFormData({
+      title: newsItem.title,
+      content: newsItem.content,
+      date: newsItem.date,
+      category: newsItem.category,
+    });
+    setImagePreview((newsItem as any).imageUrl || null);
+    setActiveTab("news");
+    setShowAddModal(true);
+  };
+
+  const handleUpdateArticle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    setSubmitting(true);
+    try {
+      let imageUrl = imagePreview || "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800";
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      const res = await apiFetchAuth(`/articles/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          excerpt: formData.excerpt,
+          content: formData.content,
+          author: formData.author,
+          team: formData.team,
+          date: formData.date || new Date().toISOString().split('T')[0],
+          imageUrl,
+          tags: formData.tags ? formData.tags.split(',').map((t: string) => t.trim()) : [],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setArticles(articles.map(a => a.id === editingId ? data.article : a));
+        setShowAddModal(false);
+        setFormData({});
+        setEditingId(null);
+        clearImage();
+        alert("아티클이 수정되었습니다!");
+      } else {
+        const error = await res.json();
+        console.error("Failed to update article:", error);
+        alert("아티클 수정에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("Error updating article:", error);
+      alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+      navigate("/admin/login");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateNews = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    setSubmitting(true);
+    try {
+      let imageUrl: string | undefined = imagePreview || undefined;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      const res = await apiFetchAuth(`/news/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          content: formData.content,
+          date: formData.date || new Date().toISOString().split('T')[0],
+          category: formData.category,
+          ...(imageUrl && { imageUrl }),
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNews(news.map(n => n.id === editingId ? data.news : n));
+        setShowAddModal(false);
+        setFormData({});
+        setEditingId(null);
+        clearImage();
+        alert("뉴스가 수정되었습니다!");
+      } else {
+        const error = await res.json();
+        console.error("Failed to update news:", error);
+        alert("뉴스 수정에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("Error updating news:", error);
+      alert("인증이 만료되었습니다. 다시 로그인해주세요.");
+      navigate("/admin/login");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -373,7 +494,7 @@ export function AdminDashboard() {
               </div>
             ) : (
               filteredArticles.map((article) => (
-                <ArticleCard key={article.id} article={article} onDelete={handleDeleteArticle} />
+                <ArticleCard key={article.id} article={article} onDelete={handleDeleteArticle} onEdit={handleEditArticle} />
               ))
             )}
           </div>
@@ -385,61 +506,33 @@ export function AdminDashboard() {
               </div>
             ) : (
               filteredNews.map((item) => (
-                <NewsCardAdmin key={item.id} news={item} onDelete={handleDeleteNews} />
+                <NewsCardAdmin key={item.id} news={item} onDelete={handleDeleteNews} onEdit={handleEditNews} />
               ))
             )}
           </div>
         )}
 
         {/* Supabase Notice */}
-        <div className="mt-8 p-6 bg-muted/50 border border-border rounded-xl">
-          <h4 className="font-medium mb-2">✅ Supabase 연동 완료</h4>
-          <p className="text-sm text-muted-foreground mb-4">
-            Supabase 데이터베이스와 성공적으로 연결되었습니다. Articles와 News를 실시간으로 관리할 수 있습니다.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={async () => {
-                if (confirm("샘플 데이터를 초기화하시겠습니까? (기존 데이터가 있다면 덮어씌워집니다)")) {
-                  try {
-                    const res = await apiFetch("/init-sample-data", {
-                      method: "POST",
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      alert(`샘플 데이터가 초기화되었습니다.\n- Articles: ${data.counts.articles}개\n- News: ${data.counts.news}개`);
-                      fetchData();
-                    } else {
-                      alert("샘플 데이터 초기화에 실패했습니다.");
-                    }
-                  } catch (error) {
-                    console.error("Error initializing sample data:", error);
-                    alert("샘플 데이터 초기화 중 오류가 발생했습니다.");
-                  }
-                }
-              }}
-              className="px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm hover:bg-primary/20 transition-colors"
-            >
-              샘플 데이터 초기화
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setShowAddModal(false); clearImage(); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setEditingId(null); clearImage(); }}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-background border-b border-border p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">
-                {activeTab === "articles" ? "아티클 추가" : "뉴스 추가"}
+                {editingId
+                  ? (activeTab === "articles" ? "아티클 수정" : "뉴스 수정")
+                  : (activeTab === "articles" ? "아티클 추가" : "뉴스 추가")}
               </h2>
-              <button onClick={() => { setShowAddModal(false); clearImage(); }} className="p-2 hover:bg-muted rounded-lg transition-colors">
+              <button onClick={() => { setShowAddModal(false); setEditingId(null); clearImage(); }} className="p-2 hover:bg-muted rounded-lg transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={activeTab === "articles" ? handleAddArticle : handleAddNews} className="p-6 space-y-4">
+            <form onSubmit={editingId
+              ? (activeTab === "articles" ? handleUpdateArticle : handleUpdateNews)
+              : (activeTab === "articles" ? handleAddArticle : handleAddNews)} className="p-6 space-y-4">
               {activeTab === "articles" ? (
                 <>
                   <div>
@@ -629,7 +722,7 @@ export function AdminDashboard() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setShowAddModal(false); clearImage(); }}
+                  onClick={() => { setShowAddModal(false); setEditingId(null); clearImage(); }}
                   className="flex-1 px-6 py-3 bg-muted text-foreground rounded-lg font-medium hover:bg-muted/80 transition-colors"
                   disabled={submitting}
                 >
@@ -641,7 +734,7 @@ export function AdminDashboard() {
                   className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {submitting ? "추가 중..." : "추가하기"}
+                  {submitting ? (editingId ? "수정 중..." : "추가 중...") : (editingId ? "수정하기" : "추가하기")}
                 </button>
               </div>
             </form>
@@ -653,7 +746,7 @@ export function AdminDashboard() {
 }
 
 // Article Card Component
-function ArticleCard({ article, onDelete }: { article: Article, onDelete: (id: string) => void }) {
+function ArticleCard({ article, onDelete, onEdit }: { article: Article, onDelete: (id: string) => void, onEdit: (article: Article) => void }) {
   return (
     <div className="p-6 bg-card border border-border rounded-xl hover:shadow-md transition-all">
       <div className="flex items-start justify-between gap-4">
@@ -673,7 +766,7 @@ function ArticleCard({ article, onDelete }: { article: Article, onDelete: (id: s
           </div>
         </div>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+          <button className="p-2 hover:bg-muted rounded-lg transition-colors" onClick={() => onEdit(article)}>
             <Edit2 className="h-4 w-4" />
           </button>
           <button className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors" onClick={() => onDelete(article.id)}>
@@ -686,7 +779,7 @@ function ArticleCard({ article, onDelete }: { article: Article, onDelete: (id: s
 }
 
 // News Card Component
-function NewsCardAdmin({ news, onDelete }: { news: NewsItem, onDelete: (id: string) => void }) {
+function NewsCardAdmin({ news, onDelete, onEdit }: { news: NewsItem, onDelete: (id: string) => void, onEdit: (news: NewsItem) => void }) {
   return (
     <div className="p-6 bg-card border border-border rounded-xl hover:shadow-md transition-all">
       <div className="flex items-start justify-between gap-4">
@@ -701,7 +794,7 @@ function NewsCardAdmin({ news, onDelete }: { news: NewsItem, onDelete: (id: stri
           <p className="text-sm text-muted-foreground">{news.content}</p>
         </div>
         <div className="flex gap-2">
-          <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+          <button className="p-2 hover:bg-muted rounded-lg transition-colors" onClick={() => onEdit(news)}>
             <Edit2 className="h-4 w-4" />
           </button>
           <button className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors" onClick={() => onDelete(news.id)}>
