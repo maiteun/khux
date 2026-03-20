@@ -9,13 +9,12 @@ export function Layout() {
 
   const isHome = location.pathname === "/";
 
-  const navItems = [
+  const scrollNavItems = [
     { id: "about", label: "About" },
     { id: "articles", label: "Articles" },
     { id: "activities", label: "Activities" },
     { id: "gallery", label: "Gallery" },
     { id: "news", label: "News" },
-    { id: "recruit", label: "Recruit" },
   ];
 
   // Track active section on scroll (only on home page)
@@ -23,13 +22,13 @@ export function Layout() {
     if (!isHome) return;
 
     const handleScroll = () => {
-      const sections = navItems.map(item => document.getElementById(item.id));
+      const sections = scrollNavItems.map(item => document.getElementById(item.id));
       const scrollPos = window.scrollY + 100;
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const section = sections[i];
         if (section && section.offsetTop <= scrollPos) {
-          setActiveSection(navItems[i].id);
+          setActiveSection(scrollNavItems[i].id);
           return;
         }
       }
@@ -83,7 +82,7 @@ export function Layout() {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
-              {navItems.map((item) => (
+              {scrollNavItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
@@ -96,6 +95,16 @@ export function Layout() {
                   {item.label}
                 </button>
               ))}
+              <Link
+                to="/recruit"
+                className={`text-sm font-medium tracking-wide transition-colors uppercase ${
+                  location.pathname === "/recruit"
+                    ? "text-foreground"
+                    : "text-foreground/60 hover:text-foreground"
+                }`}
+              >
+                Recruit
+              </Link>
             </nav>
 
             {/* Mobile menu button */}
@@ -115,7 +124,7 @@ export function Layout() {
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
             <nav className="md:hidden py-4 space-y-2">
-              {navItems.map((item) => (
+              {scrollNavItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
@@ -128,6 +137,17 @@ export function Layout() {
                   {item.label}
                 </button>
               ))}
+              <Link
+                to="/recruit"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block w-full text-left px-4 py-2 rounded-md transition-colors ${
+                  location.pathname === "/recruit"
+                    ? "text-foreground bg-accent"
+                    : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                Recruit
+              </Link>
             </nav>
           )}
         </div>
@@ -160,7 +180,7 @@ export function Layout() {
             <div>
               <h4 className="mb-3">Pages</h4>
               <ul className="space-y-2">
-                {navItems.map((item) => (
+                {scrollNavItems.map((item) => (
                   <li key={item.id}>
                     <button
                       onClick={() => scrollToSection(item.id)}
@@ -170,6 +190,11 @@ export function Layout() {
                     </button>
                   </li>
                 ))}
+                <li>
+                  <Link to="/recruit" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Recruit
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
