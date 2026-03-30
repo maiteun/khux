@@ -3,7 +3,27 @@ import { ImageIcon, Eye, Edit2, Bold, Italic, Heading1, Heading2, List, ListOrde
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
-import { uploadImage } from "../../utils/supabase-client";
+import TurndownService from "turndown";
+import { uploadImage, proxyUploadImage } from "../../utils/supabase-client";
+
+// HTML → Markdown converter
+const turndown = new TurndownService({
+  headingStyle: "atx",
+  hr: "---",
+  bulletListMarker: "-",
+  codeBlockStyle: "fenced",
+});
+
+// Keep image tags as markdown
+turndown.addRule("images", {
+  filter: "img",
+  replacement: (_content, node) => {
+    const el = node as HTMLElement;
+    const src = el.getAttribute("src") || "";
+    const alt = el.getAttribute("alt") || "image";
+    return `\n![${alt}](${src})\n`;
+  },
+});
 
 interface MarkdownEditorProps {
   value: string;
@@ -14,11 +34,20 @@ interface MarkdownEditorProps {
 export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorProps) {
   const [mode, setMode] = useState<"write" | "preview">("write");
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Use ref to always have current value in callbacks
   const valueRef = useRef(value);
   useEffect(() => { valueRef.current = value; }, [value]);
+
+  const insertAtCursor = useCallback((text: string) => {
+    const ta = textareaRef.current;
+    const cur = valueRef.current;
+    const pos = ta ? ta.selectionStart : cur.length;
+    const newValue = cur.slice(0, pos) + text + cur.slice(pos);
+    onChange(newValue);
+    valueRef.current = newValue;
+  }, [onChange]);
 
   const insertText = useCallback((before: string, after: string = "") => {
     const ta = textareaRef.current;
@@ -29,6 +58,7 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     const selected = cur.slice(start, end);
     const newText = cur.slice(0, start) + before + selected + after + cur.slice(end);
     onChange(newText);
+    valueRef.current = newText;
     requestAnimationFrame(() => {
       ta.focus();
       const cursorPos = start + before.length + selected.length;
@@ -36,92 +66,131 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     });
   }, [onChange]);
 
-  const insertImageMarkdown = useCallback((url: string, altText: string) => {
-    const ta = textareaRef.current;
-    const cur = valueRef.current;
-    const pos = ta ? ta.selectionStart : cur.length;
-    const markdown = `\n![${altText}](${url})\n`;
-    const newValue = cur.slice(0, pos) + markdown + cur.slice(pos);
-    onChange(newValue);
-    valueRef.current = newValue;
-  }, [onChange]);
-
   const handleImageUpload = useCallback(async (files: FileList | File[]) => {
     setUploading(true);
+    setUploadStatus("이미지 업로드 중...");
     try {
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
         const url = await uploadImage(file);
         const altText = file.name === "image.png" ? "image" : file.name.replace(/\.[^.]+$/, "");
-        insertImageMarkdown(url, altText);
+        insertAtCursor(`\n![${altText}](${url})\n`);
       }
     } catch (error) {
       console.error("Image upload failed:", error);
       alert("이미지 업로드에 실패했습니다.");
     } finally {
       setUploading(false);
+      setUploadStatus("");
     }
-  }, [insertImageMarkdown]);
+  }, [insertAtCursor]);
+
+  // Process pasted HTML: convert to markdown and upload images
+  const processHtmlPaste = useCallback(async (html: string) => {
+    // Convert HTML to markdown
+    let markdown = turndown.turndown(html);
+
+    // Find all image URLs in the markdown
+    const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const images: { full: string; alt: string; url: string }[] = [];
+    let match;
+    while ((match = imgRegex.exec(markdown)) !== null) {
+      images.push({ full: match[0], alt: match[1], url: match[2] });
+    }
+
+    if (images.length === 0) {
+      // No images, just insert the markdown
+      insertAtCursor(markdown);
+      return;
+    }
+
+    // Upload images
+    setUploading(true);
+    let processed = markdown;
+
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+      setUploadStatus(`이미지 업로드 중... (${i + 1}/${images.length})`);
+      try {
+        // Skip data URIs that are too small (tracking pixels etc)
+        if (img.url.startsWith("data:") && img.url.length < 200) {
+          processed = processed.replace(img.full, "");
+          continue;
+        }
+
+        let newUrl: string;
+        if (img.url.startsWith("data:image/")) {
+          // Data URL → convert to file and upload
+          const res = await fetch(img.url);
+          const blob = await res.blob();
+          const file = new File([blob], `pasted-image-${i + 1}.png`, { type: blob.type });
+          newUrl = await uploadImage(file);
+        } else if (img.url.startsWith("http")) {
+          // External URL → proxy upload
+          try {
+            newUrl = await proxyUploadImage(img.url);
+          } catch {
+            // If proxy fails, keep original URL
+            newUrl = img.url;
+          }
+        } else {
+          // Unknown format, skip
+          continue;
+        }
+        processed = processed.replace(img.url, newUrl);
+      } catch (error) {
+        console.error(`Failed to upload image ${i + 1}:`, error);
+        // Keep original URL on failure
+      }
+    }
+
+    setUploading(false);
+    setUploadStatus("");
+    insertAtCursor(processed);
+  }, [insertAtCursor]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
-    const imageFiles: File[] = [];
 
+    // 1. Check for direct image files (screenshot, copied image file)
+    const imageFiles: File[] = [];
     for (const item of Array.from(items)) {
-      // Direct image data (screenshot, copied image)
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (file) imageFiles.push(file);
       }
     }
 
+    // 2. Check for rich HTML content (Notion, web pages, etc)
+    const html = e.clipboardData.getData("text/html");
+    const plainText = e.clipboardData.getData("text/plain");
+
+    // If we have image files AND no HTML, upload directly
+    if (imageFiles.length > 0 && !html) {
+      e.preventDefault();
+      handleImageUpload(imageFiles);
+      return;
+    }
+
+    // If we have HTML with rich content (not just plain text wrapper)
+    if (html) {
+      const hasRichContent = /<(h[1-6]|p|img|ul|ol|blockquote|hr|strong|em|table)/i.test(html);
+      if (hasRichContent) {
+        e.preventDefault();
+        processHtmlPaste(html);
+        return;
+      }
+    }
+
+    // If we have image files from clipboard
     if (imageFiles.length > 0) {
       e.preventDefault();
       handleImageUpload(imageFiles);
       return;
     }
 
-    // Fallback: check if clipboard has files (some browsers put images here)
-    const files = e.clipboardData.files;
-    if (files.length > 0) {
-      const imgFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
-      if (imgFiles.length > 0) {
-        e.preventDefault();
-        handleImageUpload(imgFiles);
-        return;
-      }
-    }
-
-    // Fallback: check HTML content for <img> tags (web image copy)
-    const html = e.clipboardData.getData("text/html");
-    if (html) {
-      const imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i);
-      if (imgMatch && imgMatch[1]) {
-        const imgUrl = imgMatch[1];
-        // If it's a data URL or blob, try to convert and upload
-        if (imgUrl.startsWith("data:image/")) {
-          e.preventDefault();
-          fetch(imgUrl)
-            .then(res => res.blob())
-            .then(blob => {
-              const file = new File([blob], "pasted-image.png", { type: blob.type });
-              handleImageUpload([file]);
-            })
-            .catch(() => {
-              // Just insert the data URL directly as markdown
-              insertImageMarkdown(imgUrl, "pasted-image");
-            });
-          return;
-        }
-        // If it's a regular URL, insert directly as markdown
-        if (imgUrl.startsWith("http")) {
-          e.preventDefault();
-          insertImageMarkdown(imgUrl, "image");
-          return;
-        }
-      }
-    }
-  }, [handleImageUpload, insertImageMarkdown]);
+    // Otherwise, let default paste behavior handle it (plain text)
+  }, [handleImageUpload, processHtmlPaste]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -221,14 +290,14 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
             onPaste={handlePaste}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            placeholder={placeholder || "마크다운으로 작성하세요... 이미지는 드래그 & 드롭 또는 붙여넣기로 추가할 수 있습니다."}
+            placeholder={placeholder || "마크다운으로 작성하세요... 노션에서 바로 복사-붙여넣기하면 이미지 포함 자동 변환됩니다."}
             className="w-full min-h-[400px] px-4 py-3 bg-background text-foreground focus:outline-none resize-y font-mono text-sm leading-relaxed"
           />
           {uploading && (
             <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                이미지 업로드 중...
+                {uploadStatus || "처리 중..."}
               </div>
             </div>
           )}

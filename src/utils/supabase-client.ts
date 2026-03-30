@@ -45,6 +45,30 @@ export async function uploadImage(file: File): Promise<string> {
   return data.url;
 }
 
+// Proxy upload: fetch external image URL via Edge Function and store it
+export async function proxyUploadImage(imageUrl: string): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch(`${API_BASE_URL}/proxy-upload-image`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${publicAnonKey}`,
+      "x-user-token": session.access_token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url: imageUrl }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Proxy upload failed");
+  }
+
+  const data = await res.json();
+  return data.url;
+}
+
 // Helper for authenticated API calls (includes user token)
 export async function apiFetchAuth(path: string, options: RequestInit = {}) {
   const { data: { session } } = await supabase.auth.getSession();

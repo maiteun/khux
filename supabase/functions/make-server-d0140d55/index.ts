@@ -524,6 +524,54 @@ app.post("/make-server-d0140d55/upload-image", async (c) => {
   }
 });
 
+// Proxy-upload: fetch external image URL and upload to storage (protected)
+app.post("/make-server-d0140d55/proxy-upload-image", async (c) => {
+  try {
+    const accessToken = c.req.header('x-user-token');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
+    if (!user || authError) return c.json({ error: "Unauthorized" }, 401);
+
+    const { url } = await c.req.json();
+    if (!url) return c.json({ error: "No URL provided" }, 400);
+
+    // Fetch the image from external URL
+    const imgRes = await fetch(url);
+    if (!imgRes.ok) return c.json({ error: "Failed to fetch image" }, 400);
+
+    const contentType = imgRes.headers.get('content-type') || 'image/png';
+    const ext = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
+      : contentType.includes('gif') ? 'gif'
+      : contentType.includes('webp') ? 'webp'
+      : 'png';
+
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const filePath = `uploads/${fileName}`;
+
+    // Ensure bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === 'images');
+    if (!bucketExists) {
+      await supabase.storage.createBucket('images', { public: true });
+    }
+
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, arrayBuffer, { contentType, upsert: false });
+
+    if (uploadError) return c.json({ error: uploadError.message }, 500);
+
+    const { data: urlData } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+
+    return c.json({ url: urlData.publicUrl });
+  } catch (error) {
+    console.log(`Error proxy uploading image: ${error}`);
+    return c.json({ error: "Failed to proxy upload image" }, 500);
+  }
+});
+
 // ============ Applications CRUD ============
 
 // Get all applications (protected - admin only)
