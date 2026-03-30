@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { supabase, apiFetch, apiFetchAuth, uploadImage } from "../../utils/supabase-client";
 import type { Article, NewsItem, GalleryItem, Activity } from "../data/mock-data";
+import { MarkdownEditor } from "../components/markdown-editor";
 
 type TabType = "articles" | "news" | "gallery" | "activities";
 
@@ -775,7 +776,7 @@ export function AdminDashboard() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={closeModal}>
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-background border border-border rounded-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="sticky top-0 bg-background border-b border-border p-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold">{getModalTitle()}</h2>
               <button onClick={closeModal} className="p-2 hover:bg-muted rounded-lg transition-colors">
@@ -798,9 +799,12 @@ export function AdminDashboard() {
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" rows={2} placeholder="아티클 요약" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">본문 *</label>
-                    <textarea required value={formData.content || ""} onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" rows={6} placeholder="아티클 본문" />
+                    <label className="block text-sm font-medium mb-2">본문 * (마크다운 지원)</label>
+                    <MarkdownEditor
+                      value={formData.content || ""}
+                      onChange={(content) => setFormData({ ...formData, content })}
+                      placeholder="마크다운으로 작성하세요... 이미지는 드래그 & 드롭 또는 Ctrl+V로 붙여넣기할 수 있습니다."
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

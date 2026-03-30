@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, User, Tag, Loader2 } from "lucide-react";
 import type { Article } from "../data/mock-data";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { apiFetch } from "../../utils/supabase-client";
+import { MarkdownRenderer } from "../components/markdown-editor";
 
 export function ArticleDetail() {
   const { id } = useParams();
@@ -114,13 +115,7 @@ export function ArticleDetail() {
           </div>
 
           {/* Article Content */}
-          <div className="prose prose-lg max-w-none">
-            {article.content.split("\n\n").map((paragraph, index) => (
-              <p key={index} className="mb-6 text-foreground/90 leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
-          </div>
+          <MarkdownRenderer content={article.content} />
 
           {/* Related Articles */}
           <div className="mt-16 pt-8 border-t border-border">
