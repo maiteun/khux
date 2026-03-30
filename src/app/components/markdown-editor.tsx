@@ -323,7 +323,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
       prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-3
       prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-2
       prose-p:text-foreground/90 prose-p:leading-relaxed prose-p:mb-4
-      prose-img:rounded-lg prose-img:my-6 prose-img:mx-auto prose-img:max-w-full
+      prose-img:rounded-lg prose-img:my-0 prose-img:mx-auto prose-img:max-w-full
       prose-hr:border-border prose-hr:my-8
       prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground
       prose-strong:text-foreground
@@ -334,12 +334,48 @@ export function MarkdownRenderer({ content }: { content: string }) {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
         components={{
+          p: ({ children, ...props }) => {
+            // Check if this paragraph contains multiple images
+            const childArray = Array.isArray(children) ? children : [children];
+            const imgChildren = childArray.filter(
+              (child: any) => child?.type === "img" || child?.props?.node?.tagName === "img"
+            );
+            const nonEmptyChildren = childArray.filter(
+              (child: any) => child !== "\n" && child !== " " && child !== ""
+            );
+
+            // Multiple images → render as grid
+            if (imgChildren.length >= 2 && imgChildren.length === nonEmptyChildren.length) {
+              const cols = imgChildren.length === 2 ? "grid-cols-2"
+                : imgChildren.length === 3 ? "grid-cols-3"
+                : "grid-cols-2";
+              return (
+                <div className={`not-prose grid ${cols} gap-3 my-6`}>
+                  {childArray.map((child: any, i: number) => {
+                    if (child === "\n" || child === " " || child === "") return null;
+                    return (
+                      <div key={i} className="overflow-hidden rounded-lg">
+                        {child}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
+            // Single image → centered with margin
+            if (imgChildren.length === 1 && imgChildren.length === nonEmptyChildren.length) {
+              return <div className="my-6">{children}</div>;
+            }
+
+            return <p {...props}>{children}</p>;
+          },
           img: ({ src, alt, ...props }) => (
             <img
               src={src}
               alt={alt || ""}
               loading="lazy"
-              className="rounded-lg my-6 mx-auto max-w-full"
+              className="rounded-lg w-full h-auto object-cover"
               {...props}
             />
           ),
