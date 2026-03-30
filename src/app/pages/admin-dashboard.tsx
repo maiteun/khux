@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import {
   LogOut,
   PlusCircle,
@@ -610,13 +610,22 @@ export function AdminDashboard() {
               </div>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              로그아웃
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/admin/applications"
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+              >
+                <Users className="h-4 w-4" />
+                지원서 검토
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-border hover:bg-muted transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                로그아웃
+              </button>
+            </div>
           </div>
         </div>
       </header>
