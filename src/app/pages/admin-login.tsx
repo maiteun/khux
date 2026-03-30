@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Lock, User } from "lucide-react";
+import { useNavigate, Link } from "react-router";
+import { Lock, User, ArrowLeft } from "lucide-react";
 import { supabase } from "../../utils/supabase-client";
 
 export function AdminLogin() {
@@ -41,6 +41,14 @@ export function AdminLogin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background px-4">
+      <Link
+        to="/"
+        className="fixed top-6 left-6 inline-flex items-center gap-2 text-sm text-text-sub hover:text-foreground transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        메인으로
+      </Link>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
