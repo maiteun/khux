@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { ImageIcon, Eye, Edit2, Bold, Italic, Heading1, Heading2, List, ListOrdered, Minus, Link, Quote } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,21 +16,35 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
   const [uploading, setUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Use ref to always have current value in callbacks
+  const valueRef = useRef(value);
+  useEffect(() => { valueRef.current = value; }, [value]);
 
   const insertText = useCallback((before: string, after: string = "") => {
     const ta = textareaRef.current;
     if (!ta) return;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
-    const selected = value.slice(start, end);
-    const newText = value.slice(0, start) + before + selected + after + value.slice(end);
+    const cur = valueRef.current;
+    const selected = cur.slice(start, end);
+    const newText = cur.slice(0, start) + before + selected + after + cur.slice(end);
     onChange(newText);
     requestAnimationFrame(() => {
       ta.focus();
       const cursorPos = start + before.length + selected.length;
       ta.setSelectionRange(cursorPos, cursorPos);
     });
-  }, [value, onChange]);
+  }, [onChange]);
+
+  const insertImageMarkdown = useCallback((url: string, altText: string) => {
+    const ta = textareaRef.current;
+    const cur = valueRef.current;
+    const pos = ta ? ta.selectionStart : cur.length;
+    const markdown = `\n![${altText}](${url})\n`;
+    const newValue = cur.slice(0, pos) + markdown + cur.slice(pos);
+    onChange(newValue);
+    valueRef.current = newValue;
+  }, [onChange]);
 
   const handleImageUpload = useCallback(async (files: FileList | File[]) => {
     setUploading(true);
@@ -38,10 +52,8 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
         const url = await uploadImage(file);
-        const markdown = `\n![${file.name}](${url})\n`;
-        const ta = textareaRef.current;
-        const pos = ta ? ta.selectionStart : value.length;
-        onChange(value.slice(0, pos) + markdown + value.slice(pos));
+        const altText = file.name === "image.png" ? "image" : file.name.replace(/\.[^.]+$/, "");
+        insertImageMarkdown(url, altText);
       }
     } catch (error) {
       console.error("Image upload failed:", error);
@@ -49,22 +61,67 @@ export function MarkdownEditor({ value, onChange, placeholder }: MarkdownEditorP
     } finally {
       setUploading(false);
     }
-  }, [value, onChange]);
+  }, [insertImageMarkdown]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
     const imageFiles: File[] = [];
+
     for (const item of Array.from(items)) {
+      // Direct image data (screenshot, copied image)
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
         if (file) imageFiles.push(file);
       }
     }
+
     if (imageFiles.length > 0) {
       e.preventDefault();
       handleImageUpload(imageFiles);
+      return;
     }
-  }, [handleImageUpload]);
+
+    // Fallback: check if clipboard has files (some browsers put images here)
+    const files = e.clipboardData.files;
+    if (files.length > 0) {
+      const imgFiles = Array.from(files).filter(f => f.type.startsWith("image/"));
+      if (imgFiles.length > 0) {
+        e.preventDefault();
+        handleImageUpload(imgFiles);
+        return;
+      }
+    }
+
+    // Fallback: check HTML content for <img> tags (web image copy)
+    const html = e.clipboardData.getData("text/html");
+    if (html) {
+      const imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch && imgMatch[1]) {
+        const imgUrl = imgMatch[1];
+        // If it's a data URL or blob, try to convert and upload
+        if (imgUrl.startsWith("data:image/")) {
+          e.preventDefault();
+          fetch(imgUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], "pasted-image.png", { type: blob.type });
+              handleImageUpload([file]);
+            })
+            .catch(() => {
+              // Just insert the data URL directly as markdown
+              insertImageMarkdown(imgUrl, "pasted-image");
+            });
+          return;
+        }
+        // If it's a regular URL, insert directly as markdown
+        if (imgUrl.startsWith("http")) {
+          e.preventDefault();
+          insertImageMarkdown(imgUrl, "image");
+          return;
+        }
+      }
+    }
+  }, [handleImageUpload, insertImageMarkdown]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
