@@ -222,7 +222,7 @@ export function AdminDashboard() {
     if (!editingId) return;
     setSubmitting(true);
     try {
-      let imageUrl = imagePreview || "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800";
+      let imageUrl = imagePreview || "";
       if (imageFile) imageUrl = await uploadImage(imageFile);
 
       const res = await apiFetchAuth(`/articles/${editingId}`, {
@@ -404,7 +404,7 @@ export function AdminDashboard() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      let imageUrl = "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800";
+      let imageUrl = "";
       if (imageFile) imageUrl = await uploadImage(imageFile);
 
       const res = await apiFetchAuth("/articles", {
