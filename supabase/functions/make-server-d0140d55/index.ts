@@ -476,6 +476,54 @@ app.delete("/make-server-d0140d55/activities/:id", async (c) => {
   }
 });
 
+// ============ Image Upload ============
+
+// Upload image to Supabase Storage (protected)
+app.post("/make-server-d0140d55/upload-image", async (c) => {
+  try {
+    const accessToken = c.req.header('x-user-token');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
+    if (!user || authError) return c.json({ error: "Unauthorized" }, 401);
+
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File;
+    if (!file) return c.json({ error: "No file provided" }, 400);
+
+    const fileExt = file.name.split('.').pop() || 'png';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
+
+    // Ensure bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === 'images');
+    if (!bucketExists) {
+      await supabase.storage.createBucket('images', { public: true });
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, arrayBuffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.log(`Upload error: ${uploadError.message}`);
+      return c.json({ error: uploadError.message }, 500);
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('images')
+      .getPublicUrl(filePath);
+
+    return c.json({ url: urlData.publicUrl });
+  } catch (error) {
+    console.log(`Error uploading image: ${error}`);
+    return c.json({ error: "Failed to upload image" }, 500);
+  }
+});
+
 // ============ Applications CRUD ============
 
 // Get all applications (protected - admin only)

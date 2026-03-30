@@ -19,23 +19,30 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 }
 
-// Upload image to Supabase Storage and return the public URL
+// Upload image via Edge Function (uses service role key, no RLS issues)
 export async function uploadImage(file: File): Promise<string> {
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
-  const filePath = `uploads/${fileName}`;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated - please log in first");
 
-  const { error } = await supabase.storage
-    .from("images")
-    .upload(filePath, file);
+  const formData = new FormData();
+  formData.append("file", file);
 
-  if (error) throw error;
+  const res = await fetch(`${API_BASE_URL}/upload-image`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${publicAnonKey}`,
+      "x-user-token": session.access_token,
+    },
+    body: formData,
+  });
 
-  const { data } = supabase.storage
-    .from("images")
-    .getPublicUrl(filePath);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Upload failed");
+  }
 
-  return data.publicUrl;
+  const data = await res.json();
+  return data.url;
 }
 
 // Helper for authenticated API calls (includes user token)
