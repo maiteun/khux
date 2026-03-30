@@ -72,24 +72,26 @@ export function Layout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-background/70 border-b border-border">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <button onClick={scrollToTop} className="flex items-center">
-              <div className="text-xl font-semibold tracking-tight" style={{ fontFamily: "'Inter', sans-serif" }}>KHUX</div>
+              <span className="text-lg font-extrabold tracking-tight" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.03em' }}>
+                KH<span className="text-primary">UX</span>
+              </span>
             </button>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center space-x-8">
+            <nav className="hidden md:flex items-center gap-8">
               {scrollNavItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`text-sm font-medium tracking-wide transition-colors uppercase ${
+                  className={`text-sm font-medium transition-colors ${
                     activeSection === item.id
                       ? "text-foreground"
-                      : "text-foreground/60 hover:text-foreground"
+                      : "text-text-sub hover:text-foreground"
                   }`}
                 >
                   {item.label}
@@ -97,10 +99,10 @@ export function Layout() {
               ))}
               <Link
                 to="/recruit"
-                className={`text-sm font-medium tracking-wide transition-colors uppercase ${
+                className={`text-sm font-medium transition-colors ${
                   location.pathname === "/recruit"
                     ? "text-foreground"
-                    : "text-foreground/60 hover:text-foreground"
+                    : "text-text-sub hover:text-foreground"
                 }`}
               >
                 Recruit
@@ -123,15 +125,15 @@ export function Layout() {
 
           {/* Mobile Navigation */}
           {mobileMenuOpen && (
-            <nav className="md:hidden py-4 space-y-2">
+            <nav className="md:hidden py-4 space-y-1">
               {scrollNavItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`block w-full text-left px-4 py-2 rounded-md transition-colors ${
+                  className={`block w-full text-left px-4 py-2.5 rounded-lg transition-colors text-sm ${
                     activeSection === item.id
-                      ? "text-foreground bg-accent"
-                      : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                      ? "text-foreground bg-surface2"
+                      : "text-text-sub hover:text-foreground hover:bg-surface2"
                   }`}
                 >
                   {item.label}
@@ -140,10 +142,10 @@ export function Layout() {
               <Link
                 to="/recruit"
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block w-full text-left px-4 py-2 rounded-md transition-colors ${
+                className={`block w-full text-left px-4 py-2.5 rounded-lg transition-colors text-sm ${
                   location.pathname === "/recruit"
-                    ? "text-foreground bg-accent"
-                    : "text-foreground/70 hover:text-foreground hover:bg-accent"
+                    ? "text-foreground bg-surface2"
+                    : "text-text-sub hover:text-foreground hover:bg-surface2"
                 }`}
               >
                 Recruit
@@ -154,69 +156,25 @@ export function Layout() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="flex-1 pt-16">
         <Outlet />
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-muted/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="mb-3">KHUX</h3>
-              <p className="text-sm text-muted-foreground">
-                Kyunghee University UX/UI Research Society
-              </p>
-            </div>
-            <div>
-              <h4 className="mb-3">Teams</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Leaders</li>
-                <li>Education</li>
-                <li>Operations</li>
-                <li>Growth</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-3">Pages</h4>
-              <ul className="space-y-2">
-                {scrollNavItems.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => scrollToSection(item.id)}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-                <li>
-                  <Link to="/recruit" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Recruit
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-3">Contact</h4>
-              <p className="text-sm text-muted-foreground">
-                Email: khux@khu.ac.kr
-              </p>
-              <Link
-                to="/admin/login"
-                className="inline-block mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Admin
-              </Link>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} KHUX. All rights reserved.{" "}
+      <footer className="border-t border-border">
+        <div className="container mx-auto px-6 sm:px-8 lg:px-12 py-12">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <span className="text-base font-extrabold tracking-tight" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: '-0.03em' }}>
+              KH<span className="text-primary">UX</span>
+            </span>
+            <p className="text-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} KHUX — Kyung Hee University UX Lab
+            </p>
             <Link
               to="/admin/login"
-              className="opacity-30 hover:opacity-100 transition-opacity"
+              className="text-xs text-muted-foreground/30 hover:text-muted-foreground transition-colors"
             >
-              &bull;
+              Admin
             </Link>
           </div>
         </div>
