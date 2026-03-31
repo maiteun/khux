@@ -50,11 +50,28 @@ export function AdminRecruitTab() {
     }
   };
 
-  const updateBasicField = (id: RecruitBasicField["id"], field: keyof RecruitBasicField, value: string | boolean) => {
+  const updateBasicField = (id: string, field: keyof RecruitBasicField, value: string | boolean) => {
     setConfig((prev) => ({
       ...prev,
       basicFields: prev.basicFields.map((f) => (f.id === id ? { ...f, [field]: value } : f)),
     }));
+  };
+
+  const addBasicField = () => {
+    const newF: RecruitBasicField = {
+      id: `field_${Date.now()}`,
+      label: "새 항목",
+      placeholder: "",
+      type: "text",
+      required: false,
+      visible: true,
+      deletable: true,
+    };
+    setConfig((prev) => ({ ...prev, basicFields: [...prev.basicFields, newF] }));
+  };
+
+  const deleteBasicField = (id: string) => {
+    setConfig((prev) => ({ ...prev, basicFields: prev.basicFields.filter((f) => f.id !== id) }));
   };
 
   const updateQuestion = (id: string, field: keyof RecruitQuestion, value: string | boolean | number) => {
@@ -165,7 +182,14 @@ export function AdminRecruitTab() {
 
       {/* 기본 정보 항목 */}
       <section>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">기본 정보 항목</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">기본 정보 항목</h3>
+          <button onClick={addBasicField}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors">
+            <Plus className="h-3.5 w-3.5" />
+            항목 추가
+          </button>
+        </div>
         <div className="space-y-2">
           {config.basicFields.map((f) => (
             <div key={f.id} className={`flex items-center gap-3 px-4 py-3 bg-card border rounded-lg transition-opacity ${f.visible ? "border-border" : "border-border/40 opacity-50"}`}>
@@ -173,14 +197,23 @@ export function AdminRecruitTab() {
                 <input type="text" value={f.label}
                   onChange={(e) => updateBasicField(f.id, "label", e.target.value)}
                   className="text-sm font-medium bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none pb-0.5 w-full" />
-                {f.id !== "team" && (
+                {f.type !== "select" && (
                   <input type="text" value={f.placeholder}
                     onChange={(e) => updateBasicField(f.id, "placeholder", e.target.value)}
                     className="text-xs text-muted-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none pb-0.5 w-full"
                     placeholder="예시 텍스트" />
                 )}
               </div>
-              <div className="flex items-center gap-4 shrink-0">
+              <div className="flex items-center gap-3 shrink-0">
+                {f.type !== "select" && (
+                  <select value={f.type}
+                    onChange={(e) => updateBasicField(f.id, "type", e.target.value)}
+                    className="text-xs bg-background border border-border rounded px-2 py-1 focus:outline-none">
+                    <option value="text">텍스트</option>
+                    <option value="tel">전화번호</option>
+                    <option value="email">이메일</option>
+                  </select>
+                )}
                 <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
                   <input type="checkbox" checked={f.required}
                     onChange={(e) => updateBasicField(f.id, "required", e.target.checked)} className="rounded" />
@@ -191,6 +224,12 @@ export function AdminRecruitTab() {
                     onChange={(e) => updateBasicField(f.id, "visible", e.target.checked)} className="rounded" />
                   표시
                 </label>
+                {f.deletable && (
+                  <button onClick={() => deleteBasicField(f.id)}
+                    className="p-1 text-red-400 hover:bg-red-400/10 rounded transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           ))}

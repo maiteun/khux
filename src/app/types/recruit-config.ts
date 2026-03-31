@@ -1,9 +1,11 @@
 export interface RecruitBasicField {
-  id: "name" | "studentId" | "major" | "phone" | "email" | "team";
+  id: string;
   label: string;
   placeholder: string;
+  type: "text" | "tel" | "email" | "select";
   required: boolean;
   visible: boolean;
+  deletable?: boolean;
 }
 
 export interface RecruitQuestion {
@@ -42,12 +44,12 @@ export const DEFAULT_RECRUIT_CONFIG: RecruitConfig = {
   interviewEnd: "2026-05-12",
   resultDate: "2026-05-15",
   basicFields: [
-    { id: "name",      label: "이름",    placeholder: "홍길동",         required: true,  visible: true },
-    { id: "studentId", label: "학번",    placeholder: "2024XXXXXX",    required: true,  visible: true },
-    { id: "major",     label: "학과",    placeholder: "산업디자인학과", required: true,  visible: true },
-    { id: "phone",     label: "연락처",  placeholder: "010-0000-0000", required: true,  visible: true },
-    { id: "email",     label: "이메일",  placeholder: "example@khu.ac.kr", required: true, visible: true },
-    { id: "team",      label: "지원 팀", placeholder: "",               required: true,  visible: true },
+    { id: "name",      label: "이름",    placeholder: "홍길동",            type: "text",   required: true,  visible: true },
+    { id: "studentId", label: "학번",    placeholder: "2024XXXXXX",       type: "text",   required: true,  visible: true },
+    { id: "major",     label: "학과",    placeholder: "산업디자인학과",    type: "text",   required: true,  visible: true },
+    { id: "phone",     label: "연락처",  placeholder: "010-0000-0000",    type: "tel",    required: true,  visible: true },
+    { id: "email",     label: "이메일",  placeholder: "example@khu.ac.kr", type: "email", required: true,  visible: true },
+    { id: "team",      label: "지원 팀", placeholder: "",                  type: "select", required: true,  visible: true },
   ],
   questions: [
     {
